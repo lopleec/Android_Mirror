@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>安卓镜像使用指南</title><link rel="stylesheet" href="Guide.css"></head>
+<body>
+<nav><a href="Guide-en.html" lang="en">English</a> · 简体中文</nav>
+<h1>你的安卓手机，就在 Mac 上。</h1>
+<p>安卓镜像通过 ADB 连接，无需 root，也无需在手机安装应用。顶部选择设备，其余操作在 <strong>…</strong> 菜单中。</p>
+<h2>无线连接</h2>
+<ol>
+<li>手机与 Mac 连接同一个 Wi-Fi，在手机开发者选项中开启「无线调试」（Android 11+）。macOS 询问本地网络权限时允许访问。</li>
+<li>点击「连接手机」。二维码配对需要在手机进入「无线调试 → 使用二维码配对设备」，不能使用普通相机扫描。二维码有效期为两分钟。</li>
+<li>也可以选择「配对码」，填写手机配对弹窗中的 IP、配对端口和六位数字。</li>
+<li>配对后自动发现连接端口。无法发现时，填写无线调试主页面的连接端口，它与配对弹窗的端口不同。</li>
+</ol>
+<p>手动地址支持 IPv4、主机名和 IPv6。访客 Wi-Fi 或客户端隔离可能阻止连接、发现设备。未找到 ADB 时，进入「设置 → 设备 → 高级连接设置」，下载 Google Platform-Tools，解压后通过「选择 ADB…」选中 <strong>adb</strong> 可执行文件。</p>
+<h2>USB 连接</h2>
+<p>开启 USB 调试，用可传输数据的线缆连接手机，并在手机上允许这台 Mac 调试。选择手机后点击「连接」。USB 镜像支持 Android 5.0+。</p>
+<h2>操控与输入</h2>
+<p>点击镜像获得键盘焦点。拖动模拟滑动，按住模拟长按，滚动浏览页面，右键返回。Mac 输入法选词后可直接向主用户下支持的常规文本框提交 Unicode 文字，需要 Android 7.0+。自定义或受保护输入框可能拒绝直接输入，可使用手机键盘或主动粘贴。打字不会暗中更新剪贴板。</p>
+<table><thead><tr><th>快捷键</th><th>操作</th></tr></thead><tbody>
+<tr><td><kbd>⌘R</kbd></td><td>开始镜像 / 断开</td></tr>
+<tr><td><kbd>⌘⇧N</kbd></td><td>添加无线设备</td></tr>
+<tr><td><kbd>⌘1 / ⌘2 / ⌘3</kbd></td><td>主屏幕 / 最近任务 / 通知</td></tr>
+<tr><td><kbd>⌘[ 或 Esc</kbd></td><td>返回</td></tr>
+<tr><td><kbd>⌘⇧S</kbd></td><td>保存截图</td></tr>
+<tr><td><kbd>⌘⇧O / ⌘⇧U</kbd></td><td>唤醒手机 / 输入解锁密码</td></tr>
+<tr><td><kbd>⌘C / ⌘X / ⌘V</kbd></td><td>在镜像中复制 / 剪切 / 粘贴</td></tr>
+</tbody></table>
+<h2>画面、屏幕与声音</h2>
+<p>「… → 使用方式 → 仅投屏」由手机自行操作，关闭 Mac 输入和剪贴板同步。「设置 → 通用」管理分辨率、实体屏幕熄灭、保持唤醒、剪贴板和窗口。保持唤醒通过延长熄屏时间实现，不重复发送唤醒；断开时恢复原值。自动关闭实体屏幕在解锁后开始。</p>
+<p>声音可选择「手机扬声器」或「电脑扬声器」。电脑声音需要 Android 11+，Android 11 启动捕获时需要先解锁。应用保护可能限制画面或声音。视频卡顿时可尝试「流畅 · 1280p」、更稳定的 Wi-Fi 或 USB。</p>
+<h2>解锁与保存密码</h2>
+<p>输入手机 PIN 或密码，点击「解锁」或「连接并解锁」。应用会点亮屏幕、上滑，再等待密码界面就绪后发送一次密码，不会自动重复提交。厂商限制远程解锁时请在手机上解锁。</p>
+<p>「设置 → 密码」管理密码保存、美式实体键盘或兼容输入、Mac 验证有效期。支持数字和可打印 ASCII 字母、符号；图案和其他锁屏密码请在手机上输入。</p>
+<p>密码通过安全隔区支持的加密保护保存在本机钥匙串。自动填充需要触控 ID 或当前 Mac 账户的登录密码。有效期内（默认十分钟）无需再次验证 Mac，但每次仍需点击「连接」。Mac 锁定或休眠、应用退出时清除缓存。显示、更改、删除密码始终重新验证。显示或编辑中的内容在三十秒后、失去焦点或离开密码设置时隐藏。</p>
+<h2>设备与语言</h2>
+<p>「设置 → 设备」可重命名和删除已保存手机。删除会移除本应用记录和保存的密码；需要撤销 ADB 配对时，在手机无线调试设置中另行处理。</p>
+<p>界面跟随系统的应用语言偏好，支持英文和简体中文，其他语言回退为英文。</p>
+<footer><a href="Guide-en.html" lang="en">Read in English</a> · <a href="https://developer.android.com/tools/releases/platform-tools#downloads">Google Platform-Tools</a></footer>
+</body></html>

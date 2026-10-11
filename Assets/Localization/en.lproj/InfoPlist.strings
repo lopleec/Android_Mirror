@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "Android Mirror";
+"CFBundleName" = "Android Mirror";
+"NSLocalNetworkUsageDescription" = "Discover and connect to Android phones on the same Wi-Fi for wireless debugging pairing and mirroring.";

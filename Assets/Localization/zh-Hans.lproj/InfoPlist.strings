@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "安卓镜像";
+"CFBundleName" = "安卓镜像";
+"NSLocalNetworkUsageDescription" = "发现并连接同一 Wi-Fi 下的安卓手机，以进行无线调试配对和镜像。";

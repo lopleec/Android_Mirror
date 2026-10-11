@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Android Mirror Guide</title><link rel="stylesheet" href="Guide.css"></head>
+<body>
+<nav>English · <a href="Guide-zh-Hans.html" lang="zh-Hans">简体中文</a></nav>
+<h1>Your Android phone, on your Mac.</h1>
+<p>Android Mirror connects through ADB. No root access or installed phone app is needed. Select a device at the top of the window and find controls in the <strong>…</strong> menu.</p>
+<h2>Connect wirelessly</h2>
+<ol>
+<li>Connect the phone and Mac to the same Wi-Fi. Enable <strong>Wireless debugging</strong> in the phone's Developer options (Android 11+). Allow local network access if macOS asks.</li>
+<li>Click <strong>Connect Phone</strong>. For QR pairing, use <strong>Wireless debugging → Pair device with QR code</strong> on the phone, rather than the camera app. A QR code expires after two minutes.</li>
+<li>Alternatively, select <strong>Pairing Code</strong> and enter the IP address, pairing port and six-digit code from the phone's pairing dialog.</li>
+<li>The connection port is discovered after pairing. If it cannot be found, enter the connection port from the main Wireless debugging page. It differs from the pairing port.</li>
+</ol>
+<p>Manual host fields accept IPv4, hostnames or IPv6. Guest Wi-Fi and client isolation can block connection or discovery. If ADB is missing, open <strong>Settings → Devices → Advanced Connection Settings</strong>, download Google Platform-Tools, then select its <strong>adb</strong> executable with <strong>Choose ADB…</strong>.</p>
+<h2>Connect by USB</h2>
+<p>Enable USB debugging, connect a data-capable cable and allow this Mac's debugging request on the phone. Select the phone and click <strong>Connect</strong>. USB mirroring supports Android 5.0+.</p>
+<h2>Control and type</h2>
+<p>Click the mirror to focus input. Drag to swipe, hold to long-press, scroll to browse and right-click to go back. Mac input methods can send committed Unicode text directly to ordinary editable fields on Android 7.0+ in the main user profile. Custom or protected editors may reject direct text; use the phone keyboard or explicit paste. Typing does not silently update the clipboard.</p>
+<table><thead><tr><th>Shortcut</th><th>Action</th></tr></thead><tbody>
+<tr><td><kbd>⌘R</kbd></td><td>Start mirroring / disconnect</td></tr>
+<tr><td><kbd>⌘⇧N</kbd></td><td>Add wireless device</td></tr>
+<tr><td><kbd>⌘1 / ⌘2 / ⌘3</kbd></td><td>Home / recent apps / notifications</td></tr>
+<tr><td><kbd>⌘[ or Esc</kbd></td><td>Back</td></tr>
+<tr><td><kbd>⌘⇧S</kbd></td><td>Save screenshot</td></tr>
+<tr><td><kbd>⌘⇧O / ⌘⇧U</kbd></td><td>Wake phone / enter unlock password</td></tr>
+<tr><td><kbd>⌘C / ⌘X / ⌘V</kbd></td><td>Copy / cut / paste in the mirror</td></tr>
+</tbody></table>
+<h2>View, screen and sound</h2>
+<p><strong>… → Interaction → View Only</strong> leaves operation on the phone and disables Mac input and clipboard sync. <strong>Settings → General</strong> contains resolution, screen-power, keep-awake, clipboard and window options. Keep-awake changes the screen timeout without repeated wake commands; disconnecting restores it. Automatic physical-screen-off starts after unlocking.</p>
+<p>Choose <strong>Phone Speaker</strong> or <strong>Mac Speaker</strong> for sound. Mac audio requires Android 11+; Android 11 must be unlocked when capture starts. Protected apps may prohibit video or audio capture. If video stutters, try <strong>Smooth · 1280p</strong>, better Wi-Fi or USB.</p>
+<h2>Unlock and save a password</h2>
+<p>Enter the phone PIN/password and click <strong>Unlock</strong> or <strong>Connect and Unlock</strong>. The app wakes the screen, swipes up and waits for the password prompt before sending the password once. It never retries a password automatically. If a vendor restricts remote unlock, unlock on the phone.</p>
+<p><strong>Settings → Password</strong> manages password saving, the US physical-keyboard or compatibility input method, and Mac authentication validity. Digits and printable ASCII letters/symbols are supported; patterns and other lock passwords should be entered on the phone.</p>
+<p>Saved passwords are encrypted in this Mac's Keychain with Secure Enclave-backed protection. Autofill requires Touch ID or your current Mac account's login password. Within the chosen validity period (10 minutes by default), further Mac authentication is unnecessary, but you still click <strong>Connect</strong> each time. Locking/sleeping the Mac or quitting clears that cache. Showing, changing and deleting passwords always requires fresh authentication. Revealed/edited content hides after 30 seconds, on focus loss or when leaving the password settings.</p>
+<h2>Manage devices and language</h2>
+<p>Rename and remove saved phones in <strong>Settings → Devices</strong>. Removal deletes this app's record and saved password; remove ADB pairing separately in the phone's Wireless debugging settings if needed.</p>
+<p>The interface follows the system's preferred app language, supporting English and Simplified Chinese with English fallback.</p>
+<footer><a href="Guide-zh-Hans.html" lang="zh-Hans">阅读中文版</a> · <a href="https://developer.android.com/tools/releases/platform-tools#downloads">Google Platform-Tools</a></footer>
+</body></html>
