@@ -19,6 +19,7 @@ final class MirrorPreferences {
     var alwaysOnTop: Bool { didSet { defaults.set(alwaysOnTop, forKey: "alwaysOnTop") } }
     var autoReconnect: Bool { didSet { defaults.set(autoReconnect, forKey: "autoReconnect") } }
     var maxSize: Int { didSet { defaults.set(maxSize, forKey: "maxSize") } }
+    var videoQuality: VideoQuality { didSet { defaults.set(videoQuality.rawValue, forKey: "videoQuality") } }
     var adbPath: String { didSet { defaults.set(adbPath, forKey: "adbPath") } }
     var unlockInputMethod: UnlockInputMethod { didSet { defaults.set(unlockInputMethod.rawValue, forKey: "unlockInputMethod") } }
     var authenticationMinutes: Double { didSet { defaults.set(authenticationMinutes, forKey: "authenticationMinutes") } }
@@ -33,6 +34,7 @@ final class MirrorPreferences {
         alwaysOnTop = defaults.bool(forKey: "alwaysOnTop")
         autoReconnect = defaults.object(forKey: "autoReconnect") as? Bool ?? true
         maxSize = defaults.object(forKey: "maxSize") as? Int ?? 1920
+        videoQuality = VideoQuality(rawValue: defaults.string(forKey: "videoQuality") ?? "") ?? .high
         adbPath = defaults.string(forKey: "adbPath") ?? ""
         unlockInputMethod = UnlockInputMethod(rawValue: defaults.string(forKey: "unlockInputMethod") ?? "") ?? .physical
         authenticationMinutes = min(30, max(0, defaults.object(forKey: "authenticationMinutes") as? Double ?? 10))
@@ -40,6 +42,7 @@ final class MirrorPreferences {
     }
     var configuration: MirrorConfiguration {
         MirrorConfiguration(maxSize: maxSize, keepAwake: mode.allowsInput && keepAwake,
-                            powerOn: mode.allowsInput, audioEnabled: audioOutput == .computer)
+                            powerOn: mode.allowsInput, audioEnabled: audioOutput == .computer,
+                            videoQuality: videoQuality)
     }
 }

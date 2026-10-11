@@ -58,13 +58,17 @@ Manual connections accept IPv4, hostnames and IPv6. Enter the host and port in t
 
 **USB connection**
 
-Enable **USB debugging**, connect a data-capable cable, and accept the phone's debugging authorization prompt. Select the phone from the top device menu, then click **Connect**. An unauthorized phone cannot be controlled until permission is granted on the phone.
+Enable **USB debugging**, connect a data-capable cable, and accept the phone's debugging authorization prompt. An authorized USB phone is selected automatically and opens the phone-password entry, marked **USB Connection**, even if it has never been saved or was removed from the list. Wireless debugging can remain disabled. When both transports are authorized, the app prefers USB before connecting and preserves the current transport during a running session. An unauthorized phone cannot be controlled until permission is granted on the phone.
 
 ### Use the app
 
-Select devices from the centered top menu. To rename or remove a saved device, open **Settings → Devices**. Removal deletes this app's record and saved password; it does not revoke the phone's ADB pairing. Revoke that separately in the phone's Wireless debugging settings when needed.
+Select devices from the centered top menu. To rename or remove a saved device, open **Settings → Devices**. Removal deletes this app's record and saved password; it does not revoke the phone's ADB pairing or prevent an authorized USB phone from being detected when plugged in. Revoke that separately in the phone's Wireless debugging settings when needed.
 
-Use **… → Interaction** to switch modes. **View Only** leaves operation on the phone and disables Mac input and clipboard sync. In **Settings → General**, choose the audio output, resolution, keep-awake behavior, physical-screen power behavior and window pinning. Changing the audio output or resolution restarts the media session.
+Use **… → Interaction** to switch modes. **View Only** leaves operation on the phone and disables Mac input and clipboard sync. In **Settings → General**, choose the audio output, resolution, picture quality, keep-awake behavior, physical-screen power behavior and window pinning. Changing audio output, resolution or picture quality restarts the media session.
+
+**Settings → General → Picture** separates resolution from compression quality. High Quality is the default (16 Mbps at 1920, 24 Mbps at original resolution); Maximum Quality uses up to 32 Mbps. For fine text and gradients, try Original Resolution and Maximum Quality over USB. Standard quality preserves lower bandwidth for slower connections. The current stream is 8-bit H.264 with 4:2:0 chroma; higher bit rates reduce compression artifacts but do not add HDR, extra bit depth or missing source color information.
+
+**… → Direct Mirroring** starts a read-only session without Mac authentication, saved-password access, password submission or lock-screen navigation. The received phone screen remains visible while locked; Android-protected content may still be black. It does not turn on the phone screen or change its sleep timeout. You can later explicitly choose **Enter Unlock Password…** to enter the ordinary unlock workflow.
 
 Click the mirrored screen to focus keyboard input. Drag to swipe, hold to long-press, scroll to move a page, and right-click to go back. Mac input methods commit Unicode text directly to supported fields; custom editors, games, protected fields or restricted Android builds may reject that action. The app reports the failure without silently using or changing the clipboard. Explicit copy, cut and paste remain separate operations.
 
@@ -232,13 +236,17 @@ Android Mirror is released under the [MIT License](LICENSE). Third-party compone
 
 **USB 连接**
 
-开启「USB 调试」，使用可传输数据的线缆连接，并在手机上允许这台 Mac 调试。从顶部设备菜单选择手机，再点击「连接」。未授权设备需要先在手机上允许调试。
+开启「USB 调试」，使用可传输数据的线缆连接，并在手机上允许这台 Mac 调试。已授权的 USB 手机会自动选中并进入手机密码输入页，标注「USB 连接」，不论它是否保存过、是否从设备列表删除过。无需开启无线调试。同时存在已授权的有线与无线连接时，应用在连接前优先选择 USB，镜像过程中保留当前连接。未授权设备需要先在手机上允许调试。
 
 ### 使用
 
-顶部居中的菜单用于选择设备。「设置 → 设备」可以重命名和删除已保存设备。删除会移除本应用的记录和保存的密码，不会撤销手机上的 ADB 配对；如需撤销，请在手机无线调试设置中另行处理。
+顶部居中的菜单用于选择设备。「设置 → 设备」可以重命名和删除已保存设备。删除会移除本应用的记录和保存的密码，不会撤销手机上的 ADB 配对，也不会阻止再次插入已授权的 USB 手机时识别设备；如需撤销，请在手机无线调试设置中另行处理。
 
-「… → 使用方式」可切换操控与仅投屏。「仅投屏」由手机自行操作，关闭 Mac 输入和剪贴板同步。「设置 → 通用」集中设置声音、分辨率、保持唤醒、实体屏幕熄灭和窗口置顶。切换声音输出或分辨率会重新建立媒体连接。
+「… → 使用方式」可切换操控与仅投屏。「仅投屏」由手机自行操作，关闭 Mac 输入和剪贴板同步。「设置 → 通用」集中设置声音、分辨率、画质、保持唤醒、实体屏幕熄灭和窗口置顶。切换声音输出、分辨率或画质会重新建立媒体连接。
+
+「设置 → 通用 → 画面」将分辨率与压缩画质分开。默认高画质在 1920 分辨率下使用 16 Mbps、原分辨率下使用 24 Mbps，最高画质可达 32 Mbps。文字和渐变细节优先时，可使用 USB 并选择原分辨率、最高画质；网络较慢时可选标准档降低带宽。当前为 8 位 H.264、4:2:0 色度采样；提高码率能够减少压缩色块，但不会增加 HDR、位深或补回源视频缺失的色彩信息。
+
+「… → 直接镜像」直接开始仅显示画面的连接，不进行 Mac 验证、不读取保存密码、不提交密码，也不上滑或点击锁屏界面。手机锁定时显示它返回的画面；安卓受保护内容仍可能是黑色。此入口不会点亮手机或修改熄屏时间。之后可主动选择「输入解锁密码…」返回普通解锁流程。
 
 点击镜像获得键盘焦点。拖动模拟滑动，按住模拟长按，滚动浏览页面，右键返回。Mac 输入法选词后直接向支持的输入框提交 Unicode 文字；自定义编辑器、游戏、受保护输入框或受限系统可能拒绝该操作。失败时会显示提示，不会暗中通过剪贴板输入。主动复制、剪切、粘贴仍是独立操作。
 

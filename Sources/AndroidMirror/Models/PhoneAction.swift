@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The menu bar and window menu share labels, eligibility, routing and shortcuts.
 enum PhoneAction: CaseIterable, Identifiable {
-    case home, recentApps, notifications, back, screenshot, rotate, wake, screenPower, unlock
+    case home, recentApps, notifications, back, screenshot, rotate, wake, screenPower, unlock, directMirror
     var id: Self { self }
     func title(screenOff: Bool) -> String {
         switch self {
@@ -15,6 +15,7 @@ enum PhoneAction: CaseIterable, Identifiable {
         case .wake: return L10n.tr("Wake Phone")
         case .screenPower: return L10n.tr(screenOff ? "Turn Phone Screen On" : "Turn Phone Screen Off")
         case .unlock: return L10n.tr("Enter Unlock Password…")
+        case .directMirror: return L10n.tr("Direct Mirroring")
         }
     }
     var shortcut: (key: KeyEquivalent, modifiers: EventModifiers)? {
@@ -26,7 +27,7 @@ enum PhoneAction: CaseIterable, Identifiable {
         case .screenshot: return ("s", [.command, .shift])
         case .wake: return ("o", [.command, .shift])
         case .unlock: return ("u", [.command, .shift])
-        case .rotate, .screenPower: return nil
+        case .rotate, .screenPower, .directMirror: return nil
         }
     }
 }

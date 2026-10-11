@@ -17,9 +17,9 @@ struct ContentView: View {
                 } else {
                     Color.black
                     MirrorSurface(store: store).allowsHitTesting(store.acceptsPhoneInput)
-                    if store.phoneLockState == .locked || store.unlockPresented {
+                    if store.showsUnlockOverlay {
                         UnlockView(store: store)
-                    } else if store.phase == .starting || !store.hasVideo || store.phoneLockState == .unknown {
+                    } else if store.showsConnectingOverlay {
                         ConnectingView(store: store)
                     }
                 }
@@ -50,6 +50,8 @@ struct ContentView: View {
         .onChange(of: preferences.keepAwake) { _, _ in store.configurationChanged() }
         .onChange(of: preferences.autoScreenOff) { _, _ in store.autoScreenOffChanged() }
         .onChange(of: preferences.audioOutput) { _, _ in store.configurationChanged() }
+        .onChange(of: preferences.maxSize) { _, _ in store.configurationChanged() }
+        .onChange(of: preferences.videoQuality) { _, _ in store.configurationChanged() }
         .ignoresSafeArea()
         .preferredColorScheme(.dark)
     }

@@ -45,6 +45,7 @@ struct MirrorTitleBar: View {
         return Menu {
             Button(L10n.tr("Connect Phone…")) { store.addPhone() }
             Button(L10n.tr("Refresh Devices")) { Task { await store.refresh() } }
+            PhoneActionButton(action: .directMirror, store: store)
             Divider()
             Picker(L10n.tr("Interaction"), selection: $preferences.mode) {
                 ForEach(InteractionMode.allCases) { Text($0.title).tag($0) }

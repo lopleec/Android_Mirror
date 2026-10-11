@@ -7,6 +7,7 @@ final class DeviceRegistry {
     private(set) var devices: [Device] = []
     private(set) var saved: [SavedDevice]
     private(set) var refreshing = false
+    private(set) var usbDevices: [Device] = []
     @ObservationIgnored private let adb: any ADBTransport
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var lastAttempt: [String: Date] = [:]
@@ -18,10 +19,10 @@ final class DeviceRegistry {
         forgotten = Set(defaults.stringArray(forKey: "forgottenDevices") ?? [])
         saved = defaults.data(forKey: "savedDevices").flatMap { try? JSONDecoder().decode([SavedDevice].self, from: $0) } ?? []
     }
-    func refresh(autoReconnect: Bool) async throws {
+    func refresh(autoReconnect: Bool, activeTransportID: String? = nil) async throws {
         guard !refreshing else { return }
         refreshing = true; defer { refreshing = false }
-        try await loadDevices()
+        try await loadDevices(activeTransportID: activeTransportID)
         guard autoReconnect, !saved.isEmpty else { return }
         let services = (try? await adb.services()) ?? []
         for record in saved where !isOnline(record) {
@@ -29,7 +30,7 @@ final class DeviceRegistry {
                   Date().timeIntervalSince(lastAttempt[service.endpoint] ?? .distantPast) > 12 else { continue }
             lastAttempt[service.endpoint] = Date()
             // Never pair arbitrary broadcasts or reconnect to an unrelated phone.
-            if (try? await adb.connect(service.endpoint)) != nil { try await loadDevices() }
+            if (try? await adb.connect(service.endpoint)) != nil { try await loadDevices(activeTransportID: activeTransportID) }
         }
     }
     func device(for transportID: String) -> Device? {
@@ -108,17 +109,29 @@ final class DeviceRegistry {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return serial.isEmpty || ["unknown", "null"].contains(serial.lowercased()) ? device.id : serial
     }
-    private func loadDevices() async throws {
+    private func loadDevices(activeTransportID: String? = nil) async throws {
         let transports = try await adb.devices()
+        usbDevices = transports.filter { $0.ready && !$0.wireless }
         var refreshed: [String: String] = [:]
         for device in transports { refreshed[device.id] = await readIdentity(device) }
-        // Preserve the selected transport while it remains available, so polling does not reorder the menu.
+        // Use authorized USB when idle, but never change an active session's transport.
+        // An unauthorized/offline USB endpoint must not hide a working wireless endpoint.
         let preferredIDs = Set(devices.map(\.id))
-        let ordered = transports.filter { preferredIDs.contains($0.id) } + transports.filter { !preferredIDs.contains($0.id) }
+        let stable = transports.filter { preferredIDs.contains($0.id) } + transports.filter { !preferredIDs.contains($0.id) }
+        func priority(_ device: Device) -> Int {
+            guard device.ready else { return 3 }
+            if device.id == activeTransportID { return 0 }
+            return device.wireless ? 2 : 1
+        }
+        let ordered = stable.enumerated().sorted {
+            let first = priority($0.element), second = priority($1.element)
+            return first == second ? $0.offset < $1.offset : first < second
+        }.map(\.element)
         var seen: Set<String> = []
         devices = ordered.filter { device in
             let identity = refreshed[device.id] ?? device.id
-            return !forgotten.contains(identity) && seen.insert(identity).inserted
+            let visible = !forgotten.contains(identity) || (device.ready && !device.wireless)
+            return visible && seen.insert(identity).inserted
         }
         identities = refreshed
     }

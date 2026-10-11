@@ -202,3 +202,12 @@
 "Mac audio requires Android 11 or later. Video mirroring remains available." = "Mac audio requires Android 11 or later. Video mirroring remains available.";
 "Direct Unicode input requires Android 7.0 or later. Use the phone keyboard or paste manually." = "Direct Unicode input requires Android 7.0 or later. Use the phone keyboard or paste manually.";
 "Dismiss Message" = "Dismiss Message";
+"Picture" = "Picture";
+"Picture Quality" = "Picture Quality";
+"Standard" = "Standard";
+"High Quality" = "High Quality";
+"Maximum Quality" = "Maximum Quality";
+"Video bit rate: %d Mbps" = "Video bit rate: %d Mbps";
+"Higher quality reduces compression artifacts and uses more bandwidth. For fine detail, choose Original Resolution and USB. Changes reconnect the video stream." = "Higher quality reduces compression artifacts and uses more bandwidth. For fine detail, choose Original Resolution and USB. Changes reconnect the video stream.";
+"USB Connection" = "USB Connection";
+"Direct Mirroring" = "Direct Mirroring";

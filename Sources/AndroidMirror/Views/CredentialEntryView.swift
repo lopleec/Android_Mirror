@@ -11,22 +11,26 @@ struct CredentialEntryView: View {
 
     private var busy: Bool { store.authenticating || store.unlockSending || store.credentials.busy }
     private var verified: Bool { store.credentials.canAutofill(store.credentialAccount, validity: store.preferences.authenticationMinutes * 60) }
+    private var usesSavedEntry: Bool { store.hasSavedPassword && !manual && !store.isUSBConnection }
     var body: some View {
         VStack(spacing: 20) {
             ZStack(alignment: .bottomTrailing) {
                 Image(systemName: "lock.fill").font(.system(size: 58, weight: .regular))
                     .foregroundStyle(.white.opacity(0.7))
-                if store.hasSavedPassword {
+                if usesSavedEntry {
                     Image(systemName: "touchid").font(.system(size: 27)).foregroundStyle(.white.opacity(0.9))
                         .offset(x: 12, y: 6)
                 }
             }.padding(.bottom, 2).accessibilityHidden(true)
             VStack(spacing: 8) {
                 Text(connecting ? L10n.tr("Android Mirror Is Locked") : L10n.tr("Phone Is Locked")).font(.system(size: 20, weight: .semibold))
-                Text(store.hasSavedPassword && !manual ? (verified ? L10n.tr("Click Connect. No Mac authentication needed.") : L10n.tr("Connect with Touch ID or your Mac login password")) : L10n.tr("Enter your phone password to unlock"))
+                Text(usesSavedEntry ? (verified ? L10n.tr("Click Connect. No Mac authentication needed.") : L10n.tr("Connect with Touch ID or your Mac login password")) : L10n.tr("Enter your phone password to unlock"))
                     .font(.system(size: 12)).foregroundStyle(.white.opacity(0.65))
+                if store.isUSBConnection {
+                    Text(L10n.tr("USB Connection")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
+                }
             }
-            if store.hasSavedPassword && !manual {
+            if usesSavedEntry {
                 PrimaryActionButton(
                     title: busy ? (store.unlockSending ? L10n.tr("Unlocking…") : L10n.tr("Authenticating…")) : L10n.tr("Connect"),
                     symbol: verified ? "lock.open" : "touchid", disabled: busy,
@@ -56,7 +60,8 @@ struct CredentialEntryView: View {
             }
         }
         .padding(24).foregroundStyle(.white).frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onChange(of: store.selectedID) { _, _ in clear(); manual = false }
+        .onChange(of: store.selectedID) { _, _ in clear(); manual = false; focused = store.isUSBConnection }
+        .onAppear { focused = store.isUSBConnection }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in clear() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in clear() }
         .onDisappear { clear() }

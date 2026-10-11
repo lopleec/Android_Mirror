@@ -67,3 +67,15 @@ Use `script/build_and_run.sh --debug`, `--logs` or `--telemetry` for local diagn
 `VERSION` owns the app and DMG version. `script/create_dmg.sh` builds both macOS architectures, verifies nested signatures and architecture slices, packages ADB and its notice, and produces the DMG plus SHA-256 checksums. Packaging gives resources normal distribution read permissions and omits local extended attributes/ACLs from the staged app.
 
 Before publishing, mount the verified image read-only, confirm the application/Applications link/licenses and both localization catalogs, launch the packaged app, and compare the uploaded assets with `SHA256SUMS.txt`. Point the release tag at the tested source commit. The current build is ad-hoc signed and not notarized; release notes and installation instructions must state that accurately. Do not represent local signature verification as Developer ID approval or Apple notarization.
+
+### Video quality and color regression checks
+
+`VideoQuality` controls encoder bandwidth independently of `maxSize`; preserve it in capability negotiation. Settings changes restart the media session. `VideoDisplayBuffer` chooses full/video-range output from the encoded description, propagates missing source color attachments without overriding decoder conversions, and refreshes cached image descriptions when attachments change. Do not label an SDR stream as P3/HDR or relabel limited-range bytes as full-range bytes.
+
+The limited/full-range gradient fixtures are synthetic grayscale ramps, generated with `python3 script/generate_video_color_fixtures.py` (FFmpeg with libx264 is required only for regeneration). Regression checks decode through VideoToolbox and measure endpoints/intermediate levels as well as attachment changes. USB transport tests cover preference before connection, active-session stability and unauthorized endpoints.
+
+### USB entry and direct mirroring
+
+`DeviceRegistry.usbDevices` tracks authorized physical transports independently of saved records and transport deduplication. Forgetting a record suppresses wireless rediscovery, but not a newly attached authorized USB endpoint. `MirrorStore` selects a new USB transport only while idle and after authentication finishes; attachments during a session are deferred until disconnection. USB entry uses the manual phone-password form even if a saved credential exists. Explicit USB password entry can unlock before a view-only session without enabling ordinary mouse/keyboard control.
+
+`MirrorConnectionIntent.direct` is session-scoped, disables input and lock overlays, and preserves picture/audio choices while disabling wake and screen-timeout automation. It must survive settings restarts and recovery after the phone is manually unlocked. Disconnect clears the intent. Only an explicit unlock command restores the standard credential workflow; lock polling never reads passwords. Tests use synthetic devices to exercise entry, deletion, attachment deferral, replugging and direct-session credential guards without opening real ADB sessions.

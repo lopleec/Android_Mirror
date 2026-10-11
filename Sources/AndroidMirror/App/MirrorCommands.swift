@@ -11,6 +11,7 @@ struct MirrorCommands: Commands {
             Button(store.connected ? L10n.tr("Disconnect") : L10n.tr("Start Mirroring")) {
                 if store.phase == .idle { store.connect() } else { store.disconnect() }
             }.keyboardShortcut("r")
+            PhoneActionButton(action: .directMirror, store: store)
             Divider()
             ForEach([PhoneAction.home, .recentApps, .notifications, .back]) {
                 PhoneActionButton(action: $0, store: store, includeShortcut: true)

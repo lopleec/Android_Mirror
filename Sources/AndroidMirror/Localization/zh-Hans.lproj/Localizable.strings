@@ -202,3 +202,12 @@
 "Mac audio requires Android 11 or later. Video mirroring remains available." = "电脑声音需要 Android 11 或更高版本，屏幕镜像仍可使用。";
 "Direct Unicode input requires Android 7.0 or later. Use the phone keyboard or paste manually." = "直接输入 Unicode 文字需要 Android 7.0 或更高版本，请使用手机键盘或手动粘贴。";
 "Dismiss Message" = "关闭提示";
+"Picture" = "画面";
+"Picture Quality" = "画质";
+"Standard" = "标准";
+"High Quality" = "高画质";
+"Maximum Quality" = "最高画质";
+"Video bit rate: %d Mbps" = "视频码率：%d Mbps";
+"Higher quality reduces compression artifacts and uses more bandwidth. For fine detail, choose Original Resolution and USB. Changes reconnect the video stream." = "更高画质可减少压缩色块，但需要更多带宽。细节优先时请选择原分辨率并使用 USB。更改后会重新连接视频。";
+"USB Connection" = "USB 连接";
+"Direct Mirroring" = "直接镜像";

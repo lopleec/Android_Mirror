@@ -12,7 +12,8 @@ struct AndroidCapabilities: Equatable {
     var supportsDirectText: Bool { sdk.map { $0 >= 24 } ?? true }
     func configuration(for requested: MirrorConfiguration) -> MirrorConfiguration {
         MirrorConfiguration(maxSize: requested.maxSize, keepAwake: requested.keepAwake,
-                            powerOn: requested.powerOn, audioEnabled: requested.audioEnabled && supportsAudio)
+                            powerOn: requested.powerOn, audioEnabled: requested.audioEnabled && supportsAudio,
+                            videoQuality: requested.videoQuality)
     }
     static func detect(device: Device, adb: any ADBTransport) async -> Self {
         let value = try? await adb.run(["-s", device.id, "shell", "getprop", "ro.build.version.sdk"], timeout: 4)

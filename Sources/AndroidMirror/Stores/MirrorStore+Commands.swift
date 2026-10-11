@@ -6,9 +6,10 @@ extension MirrorStore {
         switch action {
         case .home, .recentApps, .notifications, .back: return acceptsPhoneInput
         case .screenshot, .rotate: return connected && phoneLockState == .unlocked && !unlockSending
-        case .wake: return preferences.mode.allowsInput && current?.ready == true && !unlockSending
+        case .wake: return preferences.mode.allowsInput && current?.ready == true && !unlockSending && connectionIntent.allowsControl
         case .screenPower: return canControl && !unlockSending
-        case .unlock: return canControl && phoneLockState == .locked && !unlockSending
+        case .unlock: return connected && (preferences.mode.allowsInput || isUSBConnection) && phoneLockState == .locked && !unlockSending
+        case .directMirror: return hasSelection && phase != .starting && !authenticating && !credentials.busy && !unlockSending
         }
     }
     func perform(_ action: PhoneAction) {
@@ -23,6 +24,7 @@ extension MirrorStore {
         case .wake: wakePhone()
         case .screenPower: toggleScreen()
         case .unlock: prepareUnlock()
+        case .directMirror: mirrorDirectly()
         }
     }
 }

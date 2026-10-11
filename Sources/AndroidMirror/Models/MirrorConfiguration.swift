@@ -6,16 +6,18 @@ struct MirrorConfiguration: Equatable {
     let keepAwake: Bool
     let powerOn: Bool
     let audioEnabled: Bool
+    let videoQuality: VideoQuality
 
-    init(maxSize: Int, keepAwake: Bool, powerOn: Bool, audioEnabled: Bool = true) {
+    init(maxSize: Int, keepAwake: Bool, powerOn: Bool, audioEnabled: Bool = true, videoQuality: VideoQuality = .high) {
         self.maxSize = maxSize; self.keepAwake = keepAwake; self.powerOn = powerOn; self.audioEnabled = audioEnabled
+        self.videoQuality = videoQuality
     }
 
     func serverArguments(scid: String) -> [String] {
         var options = [Self.serverVersion, "scid=\(scid)", "tunnel_forward=true", "audio=\(audioEnabled)",
             "audio_codec=raw", "audio_source=output",
             "video_codec=h264", "max_size=\(maxSize)",
-            "video_bit_rate=\(maxSize == 1280 ? 4_000_000 : 8_000_000)", "max_fps=60",
+            "video_bit_rate=\(videoQuality.bitRate(maxSize: maxSize))", "max_fps=60",
             "send_device_meta=false", "clipboard_autosync=true", "log_level=warn", "cleanup=true",
             "power_on=\(powerOn)"]
         // Milliseconds, not seconds. Unlike stay_awake, this works on unplugged Wi-Fi devices.

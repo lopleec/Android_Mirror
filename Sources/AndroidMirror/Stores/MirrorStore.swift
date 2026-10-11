@@ -33,6 +33,9 @@ final class MirrorStore {
     private var unlockTask: Task<Void, Never>?
     private(set) var authenticating = false
     private(set) var recoveringVideo = false
+    private(set) var connectionIntent: MirrorConnectionIntent = .standard
+    @ObservationIgnored private var lastUSBIDs: Set<String> = []
+    @ObservationIgnored private var pendingUSBID: String?
 
     private struct UnlockAttempt {
         let account: String
@@ -55,7 +58,13 @@ final class MirrorStore {
     var hasSavedPassword: Bool { credentials.contains(credentialAccount) }
     var hasSelection: Bool { current != nil || selectedRecord != nil }
     var connected: Bool { phase == .connected }
-    var canControl: Bool { connected && preferences.mode.allowsInput }
+    var canControl: Bool { connected && preferences.mode.allowsInput && connectionIntent.allowsControl }
+    var canRequestUnlock: Bool { connectionIntent.allowsControl && (preferences.mode.allowsInput || isUSBConnection) }
+    var isUSBConnection: Bool { current.map { $0.ready && !$0.wireless } ?? false }
+    var showsUnlockOverlay: Bool { connectionIntent.showsUnlock(state: phoneLockState, requested: unlockPresented) }
+    var showsConnectingOverlay: Bool {
+        phase == .starting || !hasVideo || connectionIntent.waitsForLockState(phoneLockState)
+    }
     var acceptsPhoneInput: Bool { canControl && phoneLockState == .unlocked && !unlockPresented && !unlockSending }
     var screenOff: Bool { screen.physicalScreenOff }
 
@@ -83,7 +92,18 @@ final class MirrorStore {
     }
     func refresh() async {
         do {
-            try await registry.refresh(autoReconnect: preferences.autoReconnect)
+            try await registry.refresh(autoReconnect: preferences.autoReconnect, activeTransportID: session?.device.id)
+            let usb = registry.usbDevices
+            let newUSB = usb.first { !lastUSBIDs.contains($0.id) }
+            lastUSBIDs = Set(usb.map(\.id))
+            if let newUSB { pendingUSBID = newUSB.id }
+            if let pendingUSBID, !lastUSBIDs.contains(pendingUSBID) { self.pendingUSBID = nil }
+            // Physical attachment selects an authorized phone, never starts a session or reads a password.
+            if phase == .idle, !authenticating, !credentials.busy,
+               let attached = usb.first(where: { $0.id == pendingUSBID }) ?? (!isUSBConnection && current?.ready != true ? usb.first : nil) {
+                selectedID = attached.id; pairingPresented = false; error = nil
+                pendingUSBID = nil
+            }
             if selectedID == nil || (phase == .idle && current == nil && selectedRecord == nil) {
                 selectedID = registry.saved.first?.id ?? devices.first(where: \.ready)?.id ?? devices.first?.id
             }
@@ -93,9 +113,11 @@ final class MirrorStore {
         guard selectedID != id, selectedRecord?.id != id else { return }
         disconnect(); selectedID = id; pairingPresented = false; error = nil
     }
-    func connect() {
+    func connect(intent: MirrorConnectionIntent = .standard) {
         guard phase == .idle else { return }
         guard hasSelection else { pairingPresented = true; return }
+        connectionIntent = intent
+        if intent == .direct { clearUnlockAttempt(); dismissUnlock() }
         error = nil; phase = .starting; hasVideo = false; phoneLockState = .unknown
         let id = UUID(); generation = id
         let record = selectedRecord
@@ -138,11 +160,11 @@ final class MirrorStore {
                         guard let self, self.generation == id else { return }; self.error = message
                     }
                 }
-                try await session.start(configuration: preferences.configuration)
+                try await session.start(configuration: intent.configuration(from: preferences.configuration))
                 guard generation == id else { session.stop(); return }
                 phase = .connected
                 clipboard.attach(session, suspended: true)
-                screen.attach(session, autoScreenOff: preferences.mode.allowsInput && preferences.autoScreenOff)
+                screen.attach(session, autoScreenOff: intent.allowsControl && preferences.mode.allowsInput && preferences.autoScreenOff)
                 lockMonitor.start(device: device) { [weak self] state in
                     guard let self, self.generation == id else { return }
                     self.handleLockState(state)
@@ -157,7 +179,7 @@ final class MirrorStore {
     func handleLockState(_ state: PhoneLockState) {
         let previous = phoneLockState
         phoneLockState = state
-        if state == .locked, let attempt = unlockAttempt {
+        if state == .locked, connectionIntent.allowsControl, let attempt = unlockAttempt {
             submitUnlock(attempt.password, method: attempt.method)
         } else if state == .unlocked {
             clearUnlockAttempt()
@@ -170,10 +192,11 @@ final class MirrorStore {
             }
         }
         screen.updateLockState(state)
-        clipboard.setSuspended(state != .unlocked || unlockPresented)
+        clipboard.setSuspended(!connectionIntent.allowsControl || state != .unlocked || unlockPresented)
     }
     private func recoverAfterUnlock() {
         let id = generation
+        let intent = connectionIntent
         recoveringVideo = true; hasVideo = false
         presenter?.stop(); displayLayer.flushAndRemoveImage()
         Task {
@@ -187,11 +210,11 @@ final class MirrorStore {
             recoveringVideo = true
             await cleanup?.value
             guard generation == next, phase == .idle else { return }
-            connect()
+            connect(intent: intent)
         }
     }
     func connectWithPassword(_ password: String, method: UnlockInputMethod = .physical) {
-        guard !authenticating, !unlockSending, preferences.mode.allowsInput else { return }
+        guard !authenticating, !unlockSending, canRequestUnlock else { return }
         guard UnlockKeyboard.supports(password), let account = credentialAccount else {
             error = L10n.tr("Use digits, English letters or symbols. Connect first if the device identity is not confirmed."); return
         }
@@ -203,7 +226,7 @@ final class MirrorStore {
         } else { connect() }
     }
     func useSavedPassword() {
-        guard !authenticating, !unlockSending, preferences.mode.allowsInput, let account = credentialAccount else { return }
+        guard !authenticating, !unlockSending, canRequestUnlock, let account = credentialAccount else { return }
         authenticating = true; error = nil
         let selection = selectedID, id = generation
         Task {
@@ -276,16 +299,29 @@ final class MirrorStore {
             await inputCleanup
         }
         session = nil; phase = .idle
+        connectionIntent = .standard
         displayLayer.flushAndRemoveImage()
         return cleanup
     }
     func configurationChanged() {
         guard phase != .idle else { return }
+        let intent = connectionIntent
         let cleanup = disconnect(), id = generation
         Task {
             await cleanup?.value
             guard generation == id, phase == .idle else { return }
-            connect()
+            connect(intent: intent)
+        }
+    }
+    func mirrorDirectly() {
+        guard !authenticating, !credentials.busy, !unlockSending, phase != .starting, hasSelection else { return }
+        if connected && connectionIntent == .direct { return }
+        let cleanup = disconnect(), id = generation
+        connectionIntent = .direct
+        Task {
+            await cleanup?.value
+            guard generation == id, phase == .idle else { return }
+            connect(intent: .direct)
         }
     }
     func autoScreenOffChanged() {
@@ -331,7 +367,7 @@ final class MirrorStore {
     }
     func toggleScreen() { if canControl { screen.setPhysicalScreen(off: !screenOff) } }
     func wakePhone() {
-        guard preferences.mode.allowsInput else { return }
+        guard preferences.mode.allowsInput, connectionIntent.allowsControl else { return }
         if connected { screen.setPhysicalScreen(off: false); return }
         guard let device = current, device.ready else { return }
         Task {
@@ -340,21 +376,22 @@ final class MirrorStore {
         }
     }
     func prepareUnlock() {
-        guard canControl, phoneLockState != .unlocked, !unlockSending else { return }
+        guard connected, preferences.mode.allowsInput || isUSBConnection, phoneLockState != .unlocked, !unlockSending else { return }
+        connectionIntent = .standard
         unlockPresented = true; unlockMessage = nil
         clipboard.setSuspended(true)
         // Present the Mac entry only. Device navigation belongs to the one-shot workflow.
     }
     func dismissUnlock() {
         unlockPresented = false
-        clipboard.setSuspended(phoneLockState == .locked)
+        clipboard.setSuspended(!connectionIntent.allowsControl || phoneLockState != .unlocked)
         if unlockKeyboardActive {
             session?.send(UnlockKeyboard.report()); session?.send(UnlockKeyboard.destroy())
             unlockKeyboardActive = false
         }
     }
     func submitUnlock(_ password: String, method: UnlockInputMethod) {
-        guard canControl, phoneLockState == .locked, !unlockSending, let session else { return }
+        guard connected, canRequestUnlock, phoneLockState == .locked, !unlockSending, let session else { return }
         guard UnlockKeyboard.supports(password) else {
             unlockMessage = L10n.tr("Use digits, English letters or symbols. Unlock patterns on your phone."); return
         }

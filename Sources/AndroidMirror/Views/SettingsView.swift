@@ -30,11 +30,20 @@ struct SettingsView: View {
                     }
                     Toggle(L10n.tr("Sync Text Clipboard"), isOn: $preferences.clipboardSync).disabled(!preferences.mode.allowsInput)
                     Toggle(L10n.tr("Keep Window on Top"), isOn: $preferences.alwaysOnTop)
+                }
+                Section(L10n.tr("Picture")) {
                     Picker(L10n.tr("Resolution"), selection: $preferences.maxSize) {
                         Text(L10n.tr("Smooth · 1280p")).tag(1280)
                         Text(L10n.tr("Detailed · 1920p")).tag(1920)
                         Text(L10n.tr("Original Resolution")).tag(0)
                     }
+                    Picker(L10n.tr("Picture Quality"), selection: $preferences.videoQuality) {
+                        ForEach(VideoQuality.allCases) { quality in Text(quality.title).tag(quality) }
+                    }
+                    Text(L10n.format("Video bit rate: %d Mbps", preferences.videoQuality.bitRate(maxSize: preferences.maxSize) / 1_000_000))
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text(L10n.tr("Higher quality reduces compression artifacts and uses more bandwidth. For fine detail, choose Original Resolution and USB. Changes reconnect the video stream."))
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }.formStyle(.grouped).tabItem { Label(L10n.tr("General"), systemImage: "slider.horizontal.3") }
 

@@ -7,16 +7,16 @@ import os
 final class HardwareVideoDecoder {
     private var session: VTDecompressionSession?
     private var sourceFormat: CMFormatDescription?
-    private var imageFormat: CMVideoFormatDescription?
+    private var displayBuffer = VideoDisplayBuffer()
     private let logger = Logger(subsystem: "com.lopleec.androidmirror", category: "video")
 
     func decode(_ sample: CMSampleBuffer) throws -> CMSampleBuffer? {
         guard let format = CMSampleBufferGetFormatDescription(sample) else { return nil }
         if sourceFormat == nil || !CMFormatDescriptionEqual(sourceFormat!, otherFormatDescription: format) {
             if let session { VTDecompressionSessionInvalidate(session) }
-            session = nil; imageFormat = nil; sourceFormat = format
+            session = nil; displayBuffer = VideoDisplayBuffer(); sourceFormat = format
             let specification = [kVTVideoDecoderSpecification_EnableHardwareAcceleratedVideoDecoder: true] as CFDictionary
-            let attributes = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+            let attributes = [kCVPixelBufferPixelFormatTypeKey: VideoDisplayBuffer.pixelFormat(for: format),
                               kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary
             let status = VTDecompressionSessionCreate(allocator: kCFAllocatorDefault, formatDescription: format,
                 decoderSpecification: specification, imageBufferAttributes: attributes,
@@ -40,18 +40,7 @@ final class HardwareVideoDecoder {
             throw MirrorError.message(L10n.format("Video decoding failed (%d).", status == noErr ? callbackStatus : status))
         }
         guard let image else { return nil }
-        if imageFormat == nil {
-            CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: image,
-                                                         formatDescriptionOut: &imageFormat)
-        }
-        guard let imageFormat else { return nil }
-        var timing = CMSampleTimingInfo(duration: .invalid, presentationTimeStamp: CMSampleBufferGetPresentationTimeStamp(sample), decodeTimeStamp: .invalid)
-        var output: CMSampleBuffer?
-        let result = CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: image,
-            formatDescription: imageFormat, sampleTiming: &timing, sampleBufferOut: &output)
-        guard result == noErr, let output else { throw MirrorError.message(L10n.tr("Could not create the video display buffer.")) }
-        H264Decoder.displayImmediately(output)
-        return output
+        return try displayBuffer.sample(image: image, source: sample)
     }
     deinit { if let session { VTDecompressionSessionInvalidate(session) } }
 }

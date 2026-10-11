@@ -42,13 +42,17 @@ final class PolicyTests: XCTestCase {
         let first = MirrorPreferences(defaults: defaults)
         XCTAssertTrue(first.keepAwake)
         XCTAssertFalse(first.autoScreenOff)
+        XCTAssertEqual(first.videoQuality, .high)
         first.mode = .viewOnly; first.maxSize = 0; first.keepAwake = false
+        first.videoQuality = .maximum
         first.autoScreenOff = true; first.autoReconnect = false; first.clipboardSync = false
         XCTAssertEqual(first.authenticationMinutes, 10)
         first.authenticationMinutes = 5
         let restored = MirrorPreferences(defaults: defaults)
         XCTAssertEqual(restored.mode, .viewOnly)
         XCTAssertEqual(restored.maxSize, 0)
+        XCTAssertEqual(restored.videoQuality, .maximum)
+        XCTAssertTrue(restored.configuration.serverArguments(scid: "123").contains("video_bit_rate=32000000"))
         XCTAssertFalse(restored.keepAwake)
         XCTAssertTrue(restored.autoScreenOff)
         XCTAssertFalse(restored.autoReconnect)
@@ -65,6 +69,164 @@ final class PolicyTests: XCTestCase {
         XCTAssertEqual(commands[2].integer(at: 2, as: UInt32.self), 224)
         XCTAssertEqual(commands[1][1], 0)
         XCTAssertEqual(commands[2][1], 1)
+    }
+    func testHigherQualitySurvivesOldAndroidAudioNegotiation() {
+        let requested = MirrorConfiguration(maxSize: 1920, keepAwake: false, powerOn: false, videoQuality: .maximum)
+        let effective = AndroidCapabilities(sdkOutput: "28").configuration(for: requested)
+        XCTAssertFalse(effective.audioEnabled)
+        XCTAssertEqual(effective.videoQuality, .maximum)
+        XCTAssertTrue(effective.serverArguments(scid: "123").contains("video_bit_rate=24000000"))
+        XCTAssertTrue(MirrorConfiguration(maxSize: 1280, keepAwake: false, powerOn: false, videoQuality: .standard)
+            .serverArguments(scid: "123").contains("video_bit_rate=4000000"))
+    }
+    @MainActor func testUSBPreferredWhenIdleButActiveWirelessConnectionIsPreserved() async throws {
+        let wifi = Device(id: "192.168.1.8:4000", name: "Android Phone", state: "device")
+        let usb = Device(id: "test-usb-serial", name: "Android Phone", state: "device")
+        let adb = FakeADB(devices: [wifi, usb], identities: [wifi.id: usb.id, usb.id: usb.id])
+        let registry = DeviceRegistry(adb: adb, defaults: isolatedDefaults())
+        try await registry.refresh(autoReconnect: false, activeTransportID: wifi.id)
+        XCTAssertEqual(registry.devices, [wifi])
+        await registry.remember(wifi)
+        try await registry.refresh(autoReconnect: false)
+        XCTAssertEqual(registry.devices, [usb])
+        XCTAssertEqual(registry.device(for: wifi.id), usb)
+        XCTAssertEqual(registry.credentialAccount(for: usb), registry.credentialAccount(for: wifi))
+        let reconnected = try await registry.reconnect(registry.saved[0])
+        XCTAssertEqual(reconnected, usb)
+        let connects = await adb.connectedEndpoints()
+        XCTAssertTrue(connects.isEmpty) // No wireless connection is necessary for USB.
+    }
+    @MainActor func testUnauthorizedUSBDoesNotHideAuthorizedWirelessDevice() async throws {
+        let wifi = Device(id: "192.168.1.8:4000", name: "Android Phone", state: "device")
+        let usb = Device(id: "test-usb-serial", name: "Android Phone", state: "unauthorized")
+        let adb = FakeADB(devices: [usb, wifi], identities: [wifi.id: usb.id])
+        let registry = DeviceRegistry(adb: adb, defaults: isolatedDefaults())
+        try await registry.refresh(autoReconnect: false)
+        XCTAssertEqual(registry.devices, [wifi])
+    }
+    @MainActor func testFreshUSBEntersCredentialsWithoutSavingOrStartingMirroring() async throws {
+        let usb = Device(id: "test-fresh-usb", name: "Android Phone", state: "device")
+        let adb = FakeADB(devices: [usb], identities: [usb.id: usb.id])
+        let defaults = isolatedDefaults()
+        let registry = DeviceRegistry(adb: adb, defaults: defaults)
+        let store = MirrorStore(preferences: MirrorPreferences(defaults: defaults), registry: registry)
+        store.pairingPresented = true
+        await store.refresh()
+        XCTAssertEqual(store.current, usb)
+        XCTAssertTrue(store.hasSelection)
+        XCTAssertTrue(store.isUSBConnection)
+        XCTAssertFalse(store.pairingPresented)
+        XCTAssertTrue(registry.saved.isEmpty)
+        XCTAssertEqual(store.phase, .idle)
+        XCTAssertFalse(store.authenticating)
+        XCTAssertTrue(store.isEnabled(.directMirror))
+        store.preferences.mode = .viewOnly
+        store.phase = .connected
+        store.handleLockState(.locked)
+        XCTAssertTrue(store.canRequestUnlock) // Explicit password entry still works at the USB entry.
+        XCTAssertTrue(store.isEnabled(.unlock))
+        XCTAssertFalse(store.canControl) // It does not turn a view-only session into ordinary control.
+        store.disconnect()
+    }
+    @MainActor func testForgottenPhoneRemainsDiscoverableOverAuthorizedUSB() async throws {
+        let usb = Device(id: "test-forgotten-usb", name: "Android Phone", state: "device")
+        let adb = FakeADB(devices: [usb], identities: [usb.id: usb.id])
+        let defaults = isolatedDefaults()
+        let registry = DeviceRegistry(adb: adb, defaults: defaults)
+        try await registry.refresh(autoReconnect: false)
+        await registry.remember(usb)
+        registry.forget(registry.saved[0])
+        let restored = DeviceRegistry(adb: adb, defaults: defaults)
+        let store = MirrorStore(preferences: MirrorPreferences(defaults: defaults), registry: restored)
+        await store.refresh()
+        XCTAssertTrue(restored.saved.isEmpty)
+        XCTAssertEqual(restored.devices, [usb])
+        XCTAssertTrue(store.isUSBConnection)
+        XCTAssertEqual(store.phase, .idle)
+        store.disconnect()
+    }
+    @MainActor func testUSBSelectsOnAttachmentButDoesNotUndoManualSelectionOnEveryPoll() async throws {
+        let wifi = Device(id: "192.168.1.8:4000", name: "Wireless Phone", state: "device")
+        let usb = Device(id: "test-new-usb", name: "USB Phone", state: "device")
+        let adb = FakeADB(devices: [wifi], identities: [wifi.id: "test-wifi", usb.id: usb.id])
+        let defaults = isolatedDefaults()
+        let store = MirrorStore(preferences: MirrorPreferences(defaults: defaults), registry: DeviceRegistry(adb: adb, defaults: defaults))
+        await store.refresh()
+        XCTAssertEqual(store.current, wifi)
+        await adb.setDevices([wifi, usb])
+        await store.refresh()
+        XCTAssertEqual(store.current, usb)
+        store.selectDevice(wifi.id)
+        await store.refresh()
+        XCTAssertEqual(store.current, wifi)
+        await adb.setDevices([wifi])
+        await store.refresh()
+        await adb.setDevices([wifi, usb])
+        await store.refresh()
+        XCTAssertEqual(store.current, usb)
+        store.disconnect()
+    }
+    @MainActor func testUSBAddedDuringMirroringWaitsUntilSessionEnds() async throws {
+        let wifi = Device(id: "192.168.1.8:4000", name: "Wireless Phone", state: "device")
+        let usb = Device(id: "test-pending-usb", name: "USB Phone", state: "device")
+        let adb = FakeADB(devices: [wifi], identities: [wifi.id: "test-wifi", usb.id: usb.id])
+        let defaults = isolatedDefaults()
+        let store = MirrorStore(preferences: MirrorPreferences(defaults: defaults), registry: DeviceRegistry(adb: adb, defaults: defaults))
+        await store.refresh()
+        store.phase = .connected
+        await adb.setDevices([wifi, usb])
+        await store.refresh()
+        XCTAssertEqual(store.current, wifi)
+        XCTAssertEqual(store.phase, .connected)
+        store.disconnect()
+        await store.refresh()
+        XCTAssertEqual(store.current, usb)
+        XCTAssertEqual(store.phase, .idle)
+        store.disconnect()
+    }
+    @MainActor func testDirectMirroringDoesNotRequestCredentialsOrAllowPhoneInput() async throws {
+        let usb = Device(id: "test-direct-usb", name: "Android Phone", state: "device")
+        let adb = FakeADB(devices: [usb], identities: [usb.id: usb.id])
+        let defaults = isolatedDefaults()
+        let store = MirrorStore(preferences: MirrorPreferences(defaults: defaults), registry: DeviceRegistry(adb: adb, defaults: defaults))
+        await store.refresh()
+        store.mirrorDirectly()
+        // Supply session state synchronously, without opening a transport in this policy test.
+        store.phase = .connected
+        store.handleLockState(.locked)
+        XCTAssertEqual(store.connectionIntent, .direct)
+        XCTAssertFalse(store.showsUnlockOverlay)
+        XCTAssertFalse(store.canRequestUnlock)
+        XCTAssertFalse(store.acceptsPhoneInput)
+        XCTAssertFalse(store.isEnabled(.wake))
+        XCTAssertFalse(store.isEnabled(.screenPower))
+        store.connectWithPassword("0000")
+        store.useSavedPassword()
+        XCTAssertFalse(store.authenticating)
+        XCTAssertFalse(store.unlockSending)
+        XCTAssertNil(store.unlockMessage)
+        XCTAssertNil(store.error)
+        store.handleLockState(.unknown)
+        XCTAssertFalse(store.showsUnlockOverlay)
+        store.prepareUnlock() // An explicit menu request returns to the ordinary password workflow.
+        XCTAssertEqual(store.connectionIntent, .standard)
+        XCTAssertTrue(store.showsUnlockOverlay)
+        store.disconnect() // Invalidates the pending start before it can open any ADB transport.
+    }
+    func testDirectMirroringPreservesPictureSettingsWithoutScreenAutomation() {
+        let requested = MirrorConfiguration(maxSize: 0, keepAwake: true, powerOn: true, videoQuality: .maximum)
+        let direct = MirrorConnectionIntent.direct.configuration(from: requested)
+        XCTAssertEqual(direct.videoQuality, .maximum)
+        XCTAssertEqual(direct.maxSize, 0)
+        XCTAssertEqual(direct.audioEnabled, requested.audioEnabled)
+        let args = direct.serverArguments(scid: "123")
+        XCTAssertTrue(args.contains("power_on=false"))
+        XCTAssertFalse(args.contains { $0.hasPrefix("screen_off_timeout=") })
+        for state in [PhoneLockState.locked, .unlocked, .unknown] {
+            XCTAssertFalse(MirrorConnectionIntent.direct.showsUnlock(state: state, requested: true))
+            XCTAssertFalse(MirrorConnectionIntent.direct.waitsForLockState(state))
+        }
+        XCTAssertEqual(MirrorConnectionIntent.standard.configuration(from: requested), requested)
     }
     @MainActor func testTransportsDeduplicateAndSavedDeviceReconnectsAtNewAddress() async throws {
         let defaults = isolatedDefaults()
@@ -188,6 +350,7 @@ private actor FakeADB: ADBTransport {
         }
     }
     func setOffline(services: [WirelessService]) { current = []; broadcasts = services }
+    func setDevices(_ devices: [Device]) { current = devices }
     func connectedEndpoints() -> [String] { connections }
 }
 

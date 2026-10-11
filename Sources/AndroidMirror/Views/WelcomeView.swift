@@ -3,7 +3,7 @@ import SwiftUI
 struct WelcomeView: View {
     let store: MirrorStore
     var body: some View {
-        if store.registry.saved.isEmpty {
+        if !store.hasSelection && store.registry.saved.isEmpty {
             VStack(spacing: 22) {
                 Image(systemName: "iphone.gen3.radiowaves.left.and.right")
                     .font(.system(size: 54, weight: .ultraLight)).foregroundStyle(.white.opacity(0.85))
@@ -14,7 +14,7 @@ struct WelcomeView: View {
                 PrimaryActionButton(title: L10n.tr("Connect Phone")) { store.addPhone() }
                     .frame(width: 162)
             }.foregroundStyle(.white).frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if store.preferences.mode.allowsInput {
+        } else if store.isUSBConnection || store.preferences.mode.allowsInput {
             CredentialEntryView(store: store, connecting: true)
         } else {
             VStack(spacing: 20) {

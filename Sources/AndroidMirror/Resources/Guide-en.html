@@ -15,6 +15,7 @@
 <p>Manual host fields accept IPv4, hostnames or IPv6. Guest Wi-Fi and client isolation can block connection or discovery. If ADB is missing, open <strong>Settings → Devices → Advanced Connection Settings</strong>, download Google Platform-Tools, then select its <strong>adb</strong> executable with <strong>Choose ADB…</strong>.</p>
 <h2>Connect by USB</h2>
 <p>Enable USB debugging, connect a data-capable cable and allow this Mac's debugging request on the phone. Select the phone and click <strong>Connect</strong>. USB mirroring supports Android 5.0+.</p>
+<p>Wireless debugging is not required for USB. When idle, an authorized USB connection takes priority over a wireless connection to the same phone.</p>
 <h2>Control and type</h2>
 <p>Click the mirror to focus input. Drag to swipe, hold to long-press, scroll to browse and right-click to go back. Mac input methods can send committed Unicode text directly to ordinary editable fields on Android 7.0+ in the main user profile. Custom or protected editors may reject direct text; use the phone keyboard or explicit paste. Typing does not silently update the clipboard.</p>
 <table><thead><tr><th>Shortcut</th><th>Action</th></tr></thead><tbody>
@@ -37,4 +38,6 @@
 <p>Rename and remove saved phones in <strong>Settings → Devices</strong>. Removal deletes this app's record and saved password; remove ADB pairing separately in the phone's Wireless debugging settings if needed.</p>
 <p>The interface follows the system's preferred app language, supporting English and Simplified Chinese with English fallback.</p>
 <footer><a href="Guide-zh-Hans.html" lang="zh-Hans">阅读中文版</a> · <a href="https://developer.android.com/tools/releases/platform-tools#downloads">Google Platform-Tools</a></footer>
+<h2>Picture quality</h2><p>In Settings → General → Picture, choose Original Resolution and Maximum Quality for fine detail and fewer compression artifacts, preferably over USB. High Quality is the default; Standard uses less bandwidth. Changes restart video. The 8-bit H.264 stream does not provide HDR or lossless color.</p>
+<h2>USB entry and direct mirroring</h2><p>Authorized USB phones automatically open the phone-password entry with a USB Connection label, even without a saved device record. In … → Direct Mirroring, start viewing without authentication or a password. The session is read-only and does not wake or unlock the phone; protected Android content may remain black. Choose Enter Unlock Password… later to request unlocking.</p>
 </body></html>

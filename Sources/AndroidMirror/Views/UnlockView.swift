@@ -5,7 +5,7 @@ struct UnlockView: View {
     var body: some View {
         ZStack {
             ConnectionBackdrop()
-            if store.preferences.mode.allowsInput {
+            if store.preferences.mode.allowsInput || store.isUSBConnection {
                 CredentialEntryView(store: store, connecting: false)
             } else {
                 VStack(spacing: 18) {
